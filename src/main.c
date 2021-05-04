@@ -7,51 +7,42 @@
 #include <errno.h>
 #include <sys/time.h>
 #include <sys/wait.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/resource.h>
 #include "jClient.h"
 #include "jServer.h"
 #include "ajs.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/resource.h>
-
 int main(int argc, char *argv[]){
-    if(argc != 3){
-        fprintf(stderr, "Invalid # of params! \n");   
+    if(argc <= 1){
+        fprintf(stderr, "Please provide flags to specify server (-s) or client (-c). Also specify max number of jobs for server.\n");   
     }
-    else if(strcmp(argv[1],"1") == 0){
-        if(access( "tmp/.special", F_OK ) == 0 ) {
-        } else {
-            mkfifo("tmp/.special", 0666);
-        }
-        if(access( "tmp/.sTOc", F_OK ) == 0 ) {
-        } else {
-            mkfifo("tmp/.sTOc", 0666);
-        }
+
+    if(access(C_TO_S, F_OK) != 0){
+        mkfifo(C_TO_S, 0666);
+    }
+
+    if(access(S_TO_C, F_OK) != 0){
+        mkfifo(S_TO_C, 0666);
+    }
+
+    if(strncmp(argv[1], "-c", 2) == 0){
         jClientMain();
     }
-    else if(strcmp(argv[1],"2") == 0){
-        int max = atoi(argv[2]);
-        if(max != 0){
-            if(access( "tmp/special", F_OK ) == 0 ) {
-                fprintf(stdout, "Special exists\n");
-            } else {
-                mkfifo("tmp/special", 0666);
-            }
-            if(access( "tmp/.sTOc", F_OK ) == 0 ) {
-            } else {
-                mkfifo("tmp/.sTOc", 0666);
-            }
-            jServerMain(max);
+    else if(strncmp(argv[1], "-s", 2) == 0){
+        int maxNumberOfJobs = atoi(argv[2]);
+
+        if(maxNumberOfJobs > 0){
+            jServerMain(maxNumberOfJobs);
         }
         else {
-            fprintf(stdout, "Invalid max size\n");
+            fprintf(stderr, "Invalid max number of jobs. Please provide a number greater than 0.\n");
             exit(EXIT_FAILURE);
         }
     }
     else {
-        fprintf(stderr, "Not client or server code! \n");
+        fprintf(stderr, "Please provide -s or -c flags to specify server or client respectively.\n");
     }
-    printf("yes\n");
     return 0;   
 }

@@ -16,6 +16,7 @@
 #include <signal.h>
 
 #include "jServer.h"
+#include "ajs.h"
 
 void sigChld_Handler(){
     pid_t id;
@@ -26,8 +27,7 @@ void sigChld_Handler(){
 }
 
 void initializeGlobals(){
-    list[0].links.next = &list[0];
-    list[0].links.prev = &list[0];
+    jobInfoLL[0].next = NULL;
 }
 
 int jServerMain(int max){
@@ -44,13 +44,13 @@ int jServerMain(int max){
     time_t timeEnd;
     //open special for reading
     fprintf(stdout, "before while loop1\n");
-    int readFrom = open("tmp/.special", O_RDONLY);
+    int readFrom = open(C_TO_S, O_RDONLY);
     if(readFrom == -1){
         perror("Invalid FIFO");
         exit(EXIT_FAILURE);
     }
-    int writeToClient = open("tmp/.sTOc", O_WRONLY);
-    if(writeToClient == -1){
+    int writeTo = open("tmp/.sTOc", O_WRONLY);
+    if(writeTo == -1){
         perror("Invalid FIFO");
         exit(EXIT_FAILURE);
     }
@@ -105,23 +105,23 @@ int jServerMain(int max){
         }
         else if(strncmp(mal, "2",1) == 0){//list all jobs
             fprintf(stdout, "Listing all jobs!\n");
-            struct status * ptr = &list[0];
-            ptr = ptr->links.next;
+            struct jobInfo * ptr = &jobInfoLL[0];
+            ptr = ptr->next;
             char * f = (char *) malloc(100);
-            while(ptr != &list[0]){
+            while(ptr != &jobInfoLL[0]){
                 
                 int size = 10; //holder
                 // int size = sprintf(f,);
-                if(write(writeToClient, f, size) == -1){
+                if(write(writeTo, f, size) == -1){
                     perror("Invalid write to client");
                 }
                 free(f);
-                ptr = ptr->links.next;
+                ptr = ptr->next;
             }
             // continue;
         }
         else if(strncmp(mal, "3",1) == 0){
-            struct status * rock = malloc(sizeof(struct status));
+            struct jobInfo * rock = malloc(sizeof(struct jobInfo));
             rock->cpuStart = clock();
             char fileID[50];
             if(sprintf(fileID, "%d.txt", id) == -1){
@@ -164,7 +164,7 @@ int jServerMain(int max){
                 fprintf(stdout, "Inside parent, process CPU time = %f\n", cpuTime);
                 char * ret = malloc(3);
                 strcpy(ret, "10");
-                if(write(writeToClient, ret, 2) == -1){
+                if(write(writeTo, ret, 2) == -1){
                     fprintf(stderr, "Read no good!\n");
                 }
             }

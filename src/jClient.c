@@ -14,19 +14,20 @@
 
 #include <sys/resource.h>
 
+#include "jClient.h"
 #include "ajs.h"
 
 int jClientMain(){
     fprintf(stdout, "Inside client\n");
 
     fprintf(stdout, "before while loop1\n");
-    int writeTo = open("tmp/.special", O_WRONLY);
+    int writeTo = open(C_TO_S, O_WRONLY);
     if(writeTo == -1){
         perror("Invalid FIFO");
         exit(EXIT_FAILURE);
     }
-    int readFromServer = open("tmp/.sTOc", O_RDONLY);
-    if(readFromServer == -1){
+    int readFrom = open(S_TO_C, O_RDONLY);
+    if(readFrom == -1){
         perror("Invalid FIFO");
         exit(EXIT_FAILURE);
     }
@@ -46,7 +47,7 @@ int jClientMain(){
         perror("Invalid malloc");
         exit(EXIT_FAILURE);
     }
-    turn->fd = readFromServer;
+    turn->fd = readFrom;
     turn->events = POLLIN;
 
     fprintf(stdout, "before while loop\n");
@@ -98,7 +99,7 @@ int jClientMain(){
             if(ret == NULL){
                 continue;
             }
-            if(read(readFromServer, &loopC, sizeof(loopC)) == -1){
+            if(read(readFrom, &loopC, sizeof(loopC)) == -1){
                 fprintf(stderr, "Invalid read from server\n");
             }
             // int new = atoi(loopC);
@@ -107,10 +108,10 @@ int jClientMain(){
             for(int j = 0; j < loopC; j++){
                 int bytesComing = 0;
                 //read how many bytes is each line in the list
-                if(read(readFromServer, &bytesComing, sizeof(bytesComing)) == -1){
+                if(read(readFrom, &bytesComing, sizeof(bytesComing)) == -1){
                     fprintf(stderr, "Invalid read from server\n");
                 }
-                if(read(readFromServer, ret, bytesComing) == -1){
+                if(read(readFrom, ret, bytesComing) == -1){
                     fprintf(stderr, "Invalid read from server\n");
                 }
                 fprintf(stdout, "%s\n", ret);
@@ -138,12 +139,12 @@ int jClientMain(){
                 fprintf(stdout, "poll error\n");
             }
             char * ret = malloc(10);
-            if(read(readFromServer, ret, 1) == -1){
+            if(read(readFrom, ret, 1) == -1){
                 fprintf(stderr, "Read no good!\n");
             }
             else {
                 fprintf(stdout, "First byte: %s\n", ret);
-                if(read(readFromServer, ret, 1) == -1){
+                if(read(readFrom, ret, 1) == -1){
                     fprintf(stderr, "Read no good!\n");
                 }
                 else {

@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "ajs.h": "c"
+        "ajs.h": "c",
+        "limits": "c"
     }
 }

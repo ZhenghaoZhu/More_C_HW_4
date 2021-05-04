@@ -12,7 +12,7 @@
 #include <sys/wait.h>
 #include <sys/resource.h>
 
-typedef struct status{
+typedef struct jobInfo{
     clock_t cpuStart;
     clock_t cpuEnd;
     double cpuTime;
@@ -21,14 +21,11 @@ typedef struct status{
     pid_t pid;
     int id;
     int status; //0 = finished, 1 = stopped, 2 = running
-    struct {
-        struct status *next;
-        struct status *prev;
-    } links;
-} STATUS;
+    struct jobInfo *next;
+} JOB_INFO;
 
 #define listSize 1
-struct status list[listSize];
+struct jobInfo jobInfoLL[listSize];
 
 int server(int max);
 
