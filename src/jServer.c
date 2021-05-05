@@ -17,6 +17,8 @@
 #include "jServer.h"
 #include "ajs.h"
 
+char* STATUS_ARRAY[3] = {"FINISHED", "STOPPED", "RUNNING"};
+
 static int listLength = 0;
 static int curNumJobs = 0;
 
@@ -32,7 +34,7 @@ void sig_child_handler(){
         ptr = ptr->next;
         while(ptr != NULL){
             if(ptr->pid == childPID){
-                ptr->cpuEnd = chldClockEnd;
+                ptr->clockEnd = chldClockEnd;
                 ptr->timeEnd = chldTimeEnd;
                 ptr->status = JOB_FINISHED;
                 curNumJobs -= 1; // Decrease number of running jobs
@@ -155,6 +157,8 @@ int jServerMain(int max){
                 if(ptr->id == passedID){
                     kill(ptr->pid, SIGKILL);
                     ptr->status = JOB_STOPPED;
+                    ptr->clockEnd = clock();
+                    ptr->timeEnd = time(NULL);
                     break;
                 }
                 ptr = ptr->next;
@@ -193,21 +197,28 @@ int jServerMain(int max){
             }
             struct job_status * ptr = &list[0];
             ptr = ptr->next;
-            char* f = malloc(LIST_LINE_MALLOC);
-            if(f == NULL){
+            char* curListLine = malloc(LIST_LINE_MALLOC);
+            if(curListLine == NULL){
                 continue;
             }
             while(ptr != NULL && ptr != &list[0]){
-                int size = sprintf(f,"ID: %d, PID: %d, STATUS: %d\n", ptr->id, ptr->pid, ptr->status);
+                int size = 0;
+                if(ptr->status == JOB_RUNNING){
+                    size = sprintf(curListLine,"ID: %d, PID: %d, STATUS: %s\n", ptr->id, ptr->pid, STATUS_ARRAY[ptr->status]);
+                } else {
+                    ptr->timeDifference = (ptr->timeEnd - ptr->timeStart);
+                    ptr->clockDifference = (ptr->clockEnd - ptr->clockStart);
+                    size = sprintf(curListLine,"ID: %d, Process ID: %d, Status: %s, CPU Time: %4f, Normal Time: %i\n", ptr->id, ptr->pid, STATUS_ARRAY[ptr->status], ptr->clockDifference, ptr->timeDifference);
+                }
                 if(write(writeToClient, &size, sizeof(size)) == -1){
                     perror("Unable to write to client");
                 }
-                if(write(writeToClient, f, size) == -1){
+                if(write(writeToClient, curListLine, size) == -1){
                     perror("Invalid write to client");
                 }
                 ptr = ptr->next;
             }
-            free(f);
+            free(curListLine);
             free(readMalloc);
             readMalloc = NULL;
             fflush(stdout);
@@ -225,8 +236,8 @@ int jServerMain(int max){
             fprintf(stdout, "Command Received: %s\n", givenCmd);
             char * skipSubmit = givenCmd + strlen("submit"); // Jumping "submit"
             struct job_status * curJob = malloc(sizeof(struct job_status));
-            curJob->cpuStart = clock();
-            curJob->cpuTime = -1.0;
+            curJob->clockStart = clock();
+            curJob->clockDifference = -1.0;
             curJob->timeStart = time(NULL);
             char jobOutput[FILENAME_SIZE];
             char jobErr[FILENAME_SIZE];

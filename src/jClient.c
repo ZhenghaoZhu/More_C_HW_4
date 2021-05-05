@@ -153,6 +153,7 @@ int jClientMain(){
             printOutFile(txtFilePath);
             fprintf(stdout, "ERROR LOG FILE:\n");
             printOutFile(errFilePath);
+            fflush(stdout);
         }
         else if(strncmp(first, "suspend", strlen("suspend")) == 0){
             int passingThis = CMD_SUSPEND;
@@ -196,15 +197,16 @@ void printOutFile(char* filePath){
         if (fseek(fp, 0L, SEEK_END) == 0) {
             long bufsize = ftell(fp);
             curFile = malloc(sizeof(char) * (bufsize + 1));
+            fseek(fp, 0L, SEEK_SET);
             size_t newLen = fread(curFile, sizeof(char), bufsize, fp);
             if ( ferror( fp ) != 0 ) {
                 fputs("Error reading file", stderr);
             } else {
-                curFile[newLen++] = '\0';
+                curFile[newLen++] = '\0'; /* Just to be safe. */
             }
+            fprintf(stdout, "%s", curFile);
         }
         fclose(fp);
     }
-    fprintf(stdout, "%s", curFile);
-    fflush(stdout);
+    free(curFile);
 }

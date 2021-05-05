@@ -16,7 +16,7 @@
 #define CMD_KILL    6
 #define CMD_CONT    7
 
-#define LIST_LINE_MALLOC 70
+#define LIST_LINE_MALLOC 200
 #define READ_MALLOC_SIZE   50
 #define SUBMIT_MALLOC_SIZE 30
 #define FILENAME_SIZE      30

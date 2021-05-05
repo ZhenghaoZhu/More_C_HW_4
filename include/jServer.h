@@ -13,12 +13,13 @@
 #include <sys/resource.h>
 
 typedef struct job_status{
-    clock_t cpuStart;
-    clock_t cpuEnd;
-    double cpuTime;
+    pid_t pid;
     time_t timeStart;
     time_t timeEnd;
-    pid_t pid;
+    clock_t clockStart;
+    clock_t clockEnd;
+    int timeDifference;
+    double clockDifference;
     int id;
     int status; //0 = finished, 1 = stopped, 2 = running
     struct job_status *next;
@@ -26,7 +27,5 @@ typedef struct job_status{
 
 #define listSize 1
 struct job_status list[listSize];
-
-int server(int max);
 
 #endif
