@@ -1,6 +1,3 @@
-#ifndef CLIENT_HEADER
-#define CLIENT_HEADER
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -12,6 +9,5 @@
 #include <sys/wait.h>
 #include <sys/resource.h>
 
+int jClientMain(char* nonInteractiveFile);
 void printOutFile(char* filePath);
-
-#endif

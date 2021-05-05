@@ -16,7 +16,7 @@
 #include "ajs.h"
 #include "jClient.h"
 
-int jClientMain(){
+int jClientMain(char* nonInteractiveFile){
     int writeToServer = open(C_TO_S, O_WRONLY);
     if(writeToServer == -1){
         perror("Invalid FIFO");
@@ -56,6 +56,15 @@ int jClientMain(){
         ssize_t getLineRet;
         size_t size = 0;
         char * cmdArgsMalloc = NULL;
+        int newStdIn = 1;
+        if(nonInteractiveFile != NULL && access(nonInteractiveFile, F_OK) == 0){
+            newStdIn = open(nonInteractiveFile, O_RDONLY, 0640);
+            if(dup2(newStdIn, fileno(stdin)) == -1){
+                exit(EXIT_FAILURE);
+            }
+        } else {
+            printf("NON INTERFATRIVE: %s\n", nonInteractiveFile);
+        }
         if((getLineRet = getline(&cmdArgsMalloc, &size, stdin)) == -1){
             free(cmdArgsMalloc);
             fprintf(stdout, "\n");

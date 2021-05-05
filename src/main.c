@@ -29,7 +29,11 @@ int main(int argc, char *argv[]){
     }
 
     if(strncmp(argv[1], "-c", 2) == 0){
-        jClientMain();
+        if(argc == 3){
+            jClientMain(argv[2]);
+        } else {
+            jClientMain(NULL);
+        }
     }
     else if(strncmp(argv[1], "-s", 2) == 0){
         int maxNumberOfJobs = atoi(argv[2]);

@@ -1,0 +1,10 @@
+submit sleep 100
+list
+kill 0
+list
+submit sleep 1
+list
+submit sleep 50
+list
+suspend 2
+exit

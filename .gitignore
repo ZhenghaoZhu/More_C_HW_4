@@ -2,5 +2,6 @@ tmp/
 build/
 .vscode/
 ajs
-*.txt
+[0-9].txt
+[10-20].txt
 *.err

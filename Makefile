@@ -49,15 +49,14 @@ clean:
 								rm -rf output
 								mkdir output
 
-# tests: clean all
-# 								@if [ -d "$(TLD)/testOutput" ]; then rm -rf $(TLD)/testOutput; fi
-# 								@mkdir $(TLD)/testOutput
-# 								@echo "\n\n"
-# 								bash -c $(TLD)/test1.sh
-# 								@echo "\n\n"
-# 								bash -c $(TLD)/test2.sh
-# 								@echo "\n\n"
-# 								bash -c $(TLD)/test3.sh
+tests: clean all
+								@if [ -d "tmp" ]; then rm -rf tmp; fi
+								@mkdir tmp/
+								bash -c $(TLD)/test1.sh
+								@echo "\n\n"
+								bash -c $(TLD)/test2.sh
+								@echo "\n\n"
+								bash -c $(TLD)/test3.sh
 
 .PRECIOUS: $(BLDD)/*.d
 -include $(BLDD)/*.d

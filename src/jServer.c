@@ -30,7 +30,7 @@ void sig_child_handler(){
     if((childPID = waitpid(-1, &stat, WNOHANG)) != -1){
         chldClockEnd = clock(); // Get times before searching linked list to be accurate
         chldTimeEnd = time(NULL); // As searching the LL might take time
-        struct job_status* ptr = &list[0];
+        struct job_status* ptr = &head[0];
         ptr = ptr->next;
         while(ptr != NULL){
             if(ptr->pid == childPID){
@@ -46,19 +46,19 @@ void sig_child_handler(){
 }
 
 void initializeJobList(){
-    list[0].id = -1;
-    list[0].next = NULL;
+    head[0].id = -1;
+    head[0].next = NULL;
 }
 
 void addJobToLL(struct job_status* newNode){
-    newNode->next = list[0].next; // Add new node to the start
-    list[0].next = newNode;
+    newNode->next = head[0].next; // Add new node to the start
+    head[0].next = newNode;
     listLength += 1;
 }
 
-int jServerMain(int max){
+int jServerMain(int maxConcurrentJobs){
     fprintf(stdout, "jServer Waiting for Connections!\n");
-    if(list[0].id != -1){
+    if(head[0].id != -1){
         initializeJobList();
     }
     if(signal(SIGCHLD, sig_child_handler) == SIG_ERR){
@@ -131,7 +131,7 @@ int jServerMain(int max){
             }
             char* skipGet = givenCmd + strlen("suspend");
             int passedID = atoi(skipGet);
-            struct job_status* ptr = &list[0];
+            struct job_status* ptr = &head[0];
             ptr = ptr->next;
             while(ptr != NULL){
                 if(ptr->id == passedID){
@@ -151,7 +151,7 @@ int jServerMain(int max){
             }
             char* skipGet = givenCmd + strlen("kill");
             int passedID = atoi(skipGet);
-            struct job_status* ptr = &list[0];
+            struct job_status* ptr = &head[0];
             ptr = ptr->next;
             while(ptr != NULL){
                 if(ptr->id == passedID){
@@ -173,7 +173,7 @@ int jServerMain(int max){
             }
             char* skipGet = givenCmd + strlen("kill");
             int passedID = atoi(skipGet);
-            struct job_status* ptr = &list[0];
+            struct job_status* ptr = &head[0];
             ptr = ptr->next;
             while(ptr != NULL){
                 if(ptr->id == passedID){
@@ -195,13 +195,13 @@ int jServerMain(int max){
             if(write(writeToClient, &listLength, sizeof(listLength)) == -1){
                 perror("Unable to write to client");
             }
-            struct job_status * ptr = &list[0];
+            struct job_status * ptr = &head[0];
             ptr = ptr->next;
             char* curListLine = malloc(LIST_LINE_MALLOC);
             if(curListLine == NULL){
                 continue;
             }
-            while(ptr != NULL && ptr != &list[0]){
+            while(ptr != NULL && ptr != &head[0]){
                 int size = 0;
                 if(ptr->status == JOB_RUNNING){
                     size = sprintf(curListLine,"ID: %d, PID: %d, STATUS: %s\n", ptr->id, ptr->pid, STATUS_ARRAY[ptr->status]);

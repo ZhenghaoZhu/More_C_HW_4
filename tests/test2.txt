@@ -1,0 +1,10 @@
+submit pwd
+list
+submit ls
+list
+submit df
+get 1
+submit sleep 1
+list
+get 2
+exit
