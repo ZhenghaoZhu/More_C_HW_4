@@ -17,6 +17,7 @@
 int main(int argc, char *argv[]){
     if(argc <= 1){
         fprintf(stderr, "Please provide flags to specify server (-s) or client (-c). Also specify max number of jobs for server.\n");   
+        exit(EXIT_FAILURE);
     }
 
     if(access(C_TO_S, F_OK) != 0){

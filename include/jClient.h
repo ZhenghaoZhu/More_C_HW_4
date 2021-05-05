@@ -12,6 +12,6 @@
 #include <sys/wait.h>
 #include <sys/resource.h>
 
-int client();
+void printOutFile(char* filePath);
 
 #endif

@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <string.h>
 #include <time.h>
@@ -7,171 +8,203 @@
 #include <errno.h>
 #include <sys/time.h>
 #include <sys/wait.h>
-
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/resource.h>
 #include <poll.h>
 
-#include <sys/resource.h>
-
-#include "jClient.h"
 #include "ajs.h"
+#include "jClient.h"
 
 int jClientMain(){
-    fprintf(stdout, "Inside client\n");
-
-    fprintf(stdout, "before while loop1\n");
-    int writeTo = open(C_TO_S, O_WRONLY);
-    if(writeTo == -1){
+    int writeToServer = open(C_TO_S, O_WRONLY);
+    if(writeToServer == -1){
         perror("Invalid FIFO");
         exit(EXIT_FAILURE);
     }
-    int readFrom = open(S_TO_C, O_RDONLY);
-    if(readFrom == -1){
+    int readFromServer = open(S_TO_C, O_RDONLY);
+    if(readFromServer == -1){
         perror("Invalid FIFO");
         exit(EXIT_FAILURE);
     }
-    struct pollfd * pd = malloc(sizeof(struct pollfd));
+    struct pollfd * writeToPD = malloc(sizeof(struct pollfd));
     //malloc for poll
-    if(pd == NULL){
+    if(writeToPD == NULL){
         perror("Invalid malloc");
         exit(EXIT_FAILURE);
     }
-    pd->fd = writeTo;
-    pd->events = POLLOUT;
+    writeToPD->fd = writeToServer;
+    writeToPD->events = POLLOUT;
     nfds_t t = 1;
 
-    struct pollfd * turn = malloc(sizeof(struct pollfd));
+    struct pollfd * readFromPD = malloc(sizeof(struct pollfd));
     //malloc for poll
-    if(turn == NULL){
+    if(readFromPD == NULL){
         perror("Invalid malloc");
         exit(EXIT_FAILURE);
     }
-    turn->fd = readFrom;
-    turn->events = POLLIN;
+    readFromPD->fd = readFromServer;
+    readFromPD->events = POLLIN;
 
-    fprintf(stdout, "before while loop\n");
-    while(1){
-        char * args[20];
-        int polla = poll(pd, t, -1);
+    fprintf(stdout, "Client Connected to Server!\n");
+    while(true){
+        int polla = poll(writeToPD, t, -1);
         if(polla == -1){
             fprintf(stdout, "poll error\n");
         }
-        fprintf(stdout, "Enter a cmd: ");
-        ssize_t a;
+        fprintf(stdout, "client> ");
+        ssize_t getLineRet;
         size_t size = 0;
-        char * mal = NULL;
-        //read a line from variable in
-        if((a = getline(&mal, &size, stdin)) == -1){ //if no line is read (for non interactive mode mostly)
-            free(mal);
+        char * cmdArgsMalloc = NULL;
+        if((getLineRet = getline(&cmdArgsMalloc, &size, stdin)) == -1){
+            free(cmdArgsMalloc);
             fprintf(stdout, "\n");
             exit(0);
         }
-        fprintf(stderr,"Size of message: %ld\n", size);
-        char * wholeCmd = malloc(a+1);
-        strcpy(wholeCmd, mal);
+        char * cmdToPass = malloc(getLineRet + 1);
+        strcpy(cmdToPass, cmdArgsMalloc);
 
-        int index = 0;
-        char * token = strtok(mal, " ");
+        char * token = strtok(cmdArgsMalloc, " ");
         char * first = token;
-        while(token != NULL){
-            args[index] = token;
-            fprintf(stderr, "Index %d: %s\n",index,args[index]);
-            token = strtok(NULL, " ");
-            index += 1;
-        }
-        args[index] = NULL;
-        if(strncmp(first,"exit",4) == 0){
-            if(write(writeTo, "1", 1) == -1){
+        if(strncmp(first,"exit", 4) == 0){
+            int passingThis = CMD_EXIT;
+            if(write(writeToServer, &passingThis, sizeof(passingThis)) == -1){
                 fprintf(stderr, "Server not active!\n");
             }
-            close(writeTo);
+            close(writeToServer);
             break;
         }
-        else if(strncmp(first, "list",4) == 0){
-            fprintf(stdout, "Listing all jobs!\n");
-            if(write(writeTo, "2", 1) == -1){
+        else if(strncmp(first, "list", strlen("list")) == 0){
+            int passingThis = CMD_LIST;
+            if(write(writeToServer, &passingThis, sizeof(passingThis)) == -1){
                 fprintf(stderr, "Server not active!\n");
             }
 
-            int loopC = 0;
-            char * ret = malloc(100);
-            if(ret == NULL){
+            int jobCount = 0;
+            char * curListLine = malloc(100);
+            if(curListLine == NULL){
                 continue;
             }
-            if(read(readFrom, &loopC, sizeof(loopC)) == -1){
+            if(read(readFromServer, &jobCount, sizeof(jobCount)) == -1){
                 fprintf(stderr, "Invalid read from server\n");
             }
             // int new = atoi(loopC);
-            fprintf(stdout, "Loop C: %d\n", loopC);
-            fprintf(stdout, "List:\n");
-            for(int j = 0; j < loopC; j++){
-                int bytesComing = 0;
+            fprintf(stdout, "Count of All Jobs Submitted: %d\n", jobCount);
+            if(jobCount == 0){
+                fprintf(stdout, "You have not submitted any jobs.\n");
+            } else {
+                fprintf(stdout, "Job List:\n\n");
+            }
+            for(int j = 0; j < jobCount; j++){
+                int curLineLen = 0;
                 //read how many bytes is each line in the list
-                if(read(readFrom, &bytesComing, sizeof(bytesComing)) == -1){
+                if(read(readFromServer, &curLineLen, sizeof(curLineLen)) == -1){
                     fprintf(stderr, "Invalid read from server\n");
                 }
-                if(read(readFrom, ret, bytesComing) == -1){
+                if(read(readFromServer, curListLine, curLineLen) == -1){
                     fprintf(stderr, "Invalid read from server\n");
                 }
-                fprintf(stdout, "%s\n", ret);
-
-                int tempInt;
+                fprintf(stdout, "%s\n", curListLine);
             }
         }
-        else if(strncmp(first, "submit",6) == 0){
-            if(write(writeTo, "3", 1) == -1){
+        else if(strncmp(first, "submit", strlen("submit")) == 0){ // Submit command
+            int passingThis = CMD_SUBMIT;
+            if(write(writeToServer, &passingThis, sizeof(passingThis)) == -1){
                 fprintf(stderr, "Server not active!\n");
             }
-            //tells server how long the command is
-            fprintf(stdout, "CMD: %s\n", wholeCmd);
-            int cmdSize = a + 1;
-            if(write(writeTo, &cmdSize , sizeof(cmdSize)) == -1){
-                fprintf(stderr, "Server not active!\n");
+            int cmdSize = getLineRet + 1;
+            if(write(writeToServer, &cmdSize , sizeof(cmdSize)) == -1){ // Pass the size first so server can malloc
+                fprintf(stderr, "Server not live\n");
             }
-            if(write(writeTo, wholeCmd, cmdSize) == -1){
-                fprintf(stderr, "Server not active!\n");
+            if(write(writeToServer, cmdToPass, cmdSize) == -1){ // Pass the cmd itself after server mallocs
+                fprintf(stderr, "Server not live\n");
             }
-
-            //write cmds to server //TODO
-            int ser = poll(turn, t, -1);
-            if(ser == -1){
-                fprintf(stdout, "poll error\n");
+            int pollReadFromServer = poll(readFromPD, t, -1); // Wait for response
+            if(pollReadFromServer == -1){
+                fprintf(stdout, "poll Error\n");
             }
-            char * ret = malloc(10);
-            if(read(readFrom, ret, 1) == -1){
-                fprintf(stderr, "Read no good!\n");
+            char * ret = malloc(SUBMIT_MALLOC_SIZE); // Malloc a bit to get the response
+            if(read(readFromServer, ret, SUBMIT_MALLOC_SIZE) == -1){
+                fprintf(stderr, "Reading server response failed\n");
             }
             else {
-                fprintf(stdout, "First byte: %s\n", ret);
-                if(read(readFrom, ret, 1) == -1){
-                    fprintf(stderr, "Read no good!\n");
-                }
-                else {
-                    fprintf(stdout, "Second byte: %s\n", ret);
-                }
+                fprintf(stdout, "Submit Status: %s\n", ret); // Print out response
             }
-            
+            fflush(stdout);
         }
-        else if(strncmp(first, "get",3) == 0){
-            if(write(writeTo, "4", 1) == -1){
+        else if(strncmp(first, "get", strlen("get")) == 0){
+            int passingThis = CMD_GET;
+            int passingID = atoi(cmdToPass);
+            if(write(writeToServer, &passingThis, sizeof(passingThis)) == -1){
+                fprintf(stderr, "Server not active!\n");
+            }
+            if(write(writeToServer, cmdToPass, strlen(cmdToPass)) == -1){
+                fprintf(stderr, "Server not active!\n");
+            }
+            char txtFilePath[FILENAME_SIZE];
+            char errFilePath[FILENAME_SIZE];
+            if(sprintf(txtFilePath, "%d.txt", passingID) == -1){
+                perror("fprintf error");
+            }
+            if(sprintf(errFilePath, "%d.err", passingID) == -1){
+                perror("fprintf error");
+            }
+            fprintf(stdout, "OUTPUT FILE:\n");
+            printOutFile(txtFilePath);
+            fprintf(stdout, "ERROR LOG FILE:\n");
+            printOutFile(errFilePath);
+        }
+        else if(strncmp(first, "suspend", strlen("suspend")) == 0){
+            int passingThis = CMD_SUSPEND;
+            if(write(writeToServer, &passingThis, sizeof(passingThis)) == -1){
+                fprintf(stderr, "Server not active!\n");
+            }
+            if(write(writeToServer, cmdToPass, strlen(cmdToPass)) == -1){
                 fprintf(stderr, "Server not active!\n");
             }
         }
-        else if(strncmp(first, "kill",4) == 0){
-            if(write(writeTo, "5", 1) == -1){
+        else if(strncmp(first, "kill", strlen("kill")) == 0){
+            int passingThis = CMD_KILL;
+            if(write(writeToServer, &passingThis, sizeof(passingThis)) == -1){
+                fprintf(stderr, "Server not active!\n");
+            }
+            if(write(writeToServer, cmdToPass, strlen(cmdToPass)) == -1){
                 fprintf(stderr, "Server not active!\n");
             }
         }
-        else if(strncmp(first, "suspend",7) == 0){
-            if(write(writeTo, "5", 1) == -1){
+        else if(strncmp(first, "continue", strlen("continue")) == 0){
+            int passingThis = CMD_CONT;
+            if(write(writeToServer, &passingThis, sizeof(passingThis)) == -1){
+                fprintf(stderr, "Server not active!\n");
+            }
+            if(write(writeToServer, cmdToPass, strlen(cmdToPass)) == -1){
                 fprintf(stderr, "Server not active!\n");
             }
         }
         else {
-            // fprintf(stdout,"invalid cmd\n");
+            fprintf(stdout,"invalid cmd\n");
         }
-        free(mal);
+        free(cmdArgsMalloc);
     }
     return 0;
+}
+
+void printOutFile(char* filePath){
+    char *curFile = NULL;
+    FILE *fp = fopen(filePath, "r");
+    if (fp != NULL) {
+        if (fseek(fp, 0L, SEEK_END) == 0) {
+            long bufsize = ftell(fp);
+            curFile = malloc(sizeof(char) * (bufsize + 1));
+            size_t newLen = fread(curFile, sizeof(char), bufsize, fp);
+            if ( ferror( fp ) != 0 ) {
+                fputs("Error reading file", stderr);
+            } else {
+                curFile[newLen++] = '\0';
+            }
+        }
+        fclose(fp);
+    }
+    fprintf(stdout, "%s", curFile);
+    fflush(stdout);
 }

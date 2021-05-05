@@ -19,7 +19,7 @@ DFLAGS := -g -DDEBUG -DCOLOR
 PRINT_STAMENTS := -DERROR -DSUCCESS -DWARN -DINFO
 
 STD := -std=gnu11
-LIBS := -lm $(shell pkg-config --cflags --libs glib-2.0)
+LIBS := -lm 
 
 CFLAGS += $(STD)
 
@@ -46,16 +46,18 @@ $(BLDD)/%.o: $(SRCD)/%.c
 clean:
 								rm -rf $(BLDD)
 								rm -rf $(EXEC)
+								rm -rf output
+								mkdir output
 
-tests: clean all
-								@if [ -d "$(TLD)/testOutput" ]; then rm -rf $(TLD)/testOutput; fi
-								@mkdir $(TLD)/testOutput
-								@echo "\n\n"
-								bash -c $(TLD)/test1.sh
-								@echo "\n\n"
-								bash -c $(TLD)/test2.sh
-								@echo "\n\n"
-								bash -c $(TLD)/test3.sh
+# tests: clean all
+# 								@if [ -d "$(TLD)/testOutput" ]; then rm -rf $(TLD)/testOutput; fi
+# 								@mkdir $(TLD)/testOutput
+# 								@echo "\n\n"
+# 								bash -c $(TLD)/test1.sh
+# 								@echo "\n\n"
+# 								bash -c $(TLD)/test2.sh
+# 								@echo "\n\n"
+# 								bash -c $(TLD)/test3.sh
 
 .PRECIOUS: $(BLDD)/*.d
 -include $(BLDD)/*.d
